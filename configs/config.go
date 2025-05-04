@@ -40,7 +40,7 @@ func LoadEnv() {
 		DBPort:        MustGetEnvOrDefault("DB_PORT", "5432"),
 		DBUser:        MustGetEnvOrDefault("DB_USER", "Bishalkoirala"),
 		DBPassword:    MustGetEnvOrDefault("DB_PASSWORD", "bishal1212"),
-		DBName:        MustGetEnvOrDefault("DB_NAME", "Task_DB"),
+		DBName:        MustGetEnvOrDefault("DB_NAME", "task_db"),
 		RedisHost:     MustGetEnvOrDefault("REDIS_HOST", "localhost"),
 		RedisPort:     MustGetEnvOrDefault("REDIS_PORT", "6379"),
 		RedisPassword: MustGetEnvOrDefault("REDIS_PASSWORD", ""),
