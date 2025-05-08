@@ -6,14 +6,15 @@ import (
 	"TaskManagmentApis/pkg/utils"
 	"errors"
 	"fmt"
+	"time"
 
 	"gorm.io/gorm"
 )
 
 // first interface
 type AuthService interface {
-	RegisterUser(name, email, password string) (*models.User, error)
-	LoginUser(email, password string) (*models.User, error)
+	RegisterUser(name, email, password string) (*models.User, string, error)
+	LoginUser(email, password string) (*models.User, string, error)
 }
 
 type AuthServiceImpl struct {
@@ -21,6 +22,7 @@ type AuthServiceImpl struct {
 	ValidateEmail   func(string) bool
 	HashPassword    func(string) (string, error)
 	ComparePassword func(string, string) bool
+	GenerateToken   func(string, string, time.Duration) (string, error)
 }
 
 func NewAuthService(authrepo repositories.AuthRepository) AuthService {
@@ -29,6 +31,7 @@ func NewAuthService(authrepo repositories.AuthRepository) AuthService {
 		ValidateEmail:   utils.ISValidateEmail,
 		HashPassword:    utils.HashPassword,
 		ComparePassword: utils.ComparePassword,
+		GenerateToken:   utils.GenerateToken,
 	}
 }
 
@@ -50,14 +53,14 @@ func (s *AuthServiceImpl) UserExist(email string) error {
 }
 
 // register
-func (s *AuthServiceImpl) RegisterUser(name, email, password string) (*models.User, error) {
+func (s *AuthServiceImpl) RegisterUser(name, email, password string) (*models.User, string, error) {
 	if err := s.UserExist(email); err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	hashPassword, err := s.HashPassword(password)
 	if err != nil {
-		return nil, fmt.Errorf("failed to hash password: %v", err)
+		return nil, "", fmt.Errorf("failed to hash password: %v", err)
 	}
 
 	user := &models.User{
@@ -68,28 +71,43 @@ func (s *AuthServiceImpl) RegisterUser(name, email, password string) (*models.Us
 
 	createdUser, err := s.AuthRepo.CreateUser(user)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create user: %v", err)
+		return nil, "", fmt.Errorf("failed to create user: %v", err)
 	}
 
-	return createdUser, nil
+	expiration := time.Hour
+	token, err := s.GenerateToken(createdUser.ID.String(), createdUser.Email, expiration)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to generate token: %v", err)
+	}
+
+	return createdUser, token, nil
 
 }
 
 // login
 
-func (s *AuthServiceImpl) LoginUser(email, password string) (*models.User, error) {
-	var user *models.User
-	var err error
+func (s *AuthServiceImpl) LoginUser(email, password string) (*models.User, string, error) {
 
 	// check the email
-	user, err = s.AuthRepo.GetUserByEmail(email)
+	user, err := s.AuthRepo.GetUserByEmail(email)
 	if err != nil {
-		return nil, errors.New("Invalid email or password")
+		return nil, "", errors.New("invalid email or password")
+	}
+
+	if user == nil {
+		return nil, "", errors.New("invalid email or password")
 	}
 	// compare password
 	if !s.ComparePassword(user.PasswordHash, password) {
-		return nil, errors.New("INvalid email or password")
+		return nil, "", errors.New("INvalid email or password")
+	}
+
+	// token
+	expiration := time.Hour
+	token, err := s.GenerateToken(user.ID.String(), user.Email, expiration)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to generate token: %v", err)
 	}
 	// return
-	return user, nil
+	return user, token, nil
 }

@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"TaskManagmentApis/internal/models"
+	"errors"
 
 	"gorm.io/gorm"
 )
@@ -10,7 +11,7 @@ import (
 type AuthRepository interface {
 	CreateUser(user *models.User) (*models.User, error)
 	GetUserByEmail(email string) (*models.User, error)
-	Updateuser(user *models.User) (*models.User, error)
+	UpdateUser(user *models.User) (*models.User, error)
 	DeleteUser(user *models.User) (*models.User, error)
 }
 
@@ -36,13 +37,15 @@ func (repo *AuthRepositoryImpl) CreateUser(user *models.User) (*models.User, err
 func (repo *AuthRepositoryImpl) GetUserByEmail(email string) (*models.User, error) {
 	var user models.User
 	if err := repo.DB.Where("email = ?", email).First(&user).Error; err != nil {
-		return nil, err
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
 	}
 	return &user, nil
 }
 
 // Updateuser
-func (repo *AuthRepositoryImpl) Updateuser(user *models.User) (*models.User, error) {
+func (repo *AuthRepositoryImpl) UpdateUser(user *models.User) (*models.User, error) {
 	if err := repo.DB.Save(user).Error; err != nil {
 		return nil, err
 	}

@@ -29,7 +29,7 @@ func (h *AuthHandler) Register(ctx *gin.Context) {
 	}
 
 	// register service
-	user, err := h.AuthService.RegisterUser(input.Name, input.Email, input.Password)
+	user, token, err := h.AuthService.RegisterUser(input.Name, input.Email, input.Password)
 	if err != nil {
 		ctx.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 		return
@@ -38,6 +38,7 @@ func (h *AuthHandler) Register(ctx *gin.Context) {
 	// return json
 	ctx.JSON(http.StatusCreated, gin.H{
 		"message": "User registered successfully",
+		"token":   token,
 		"user": gin.H{
 			"userId":   user.ID,
 			"username": user.Name,
@@ -57,7 +58,7 @@ func (h *AuthHandler) Login(ctx *gin.Context) {
 	}
 
 	// Login service
-	user, err := h.AuthService.LoginUser(input.Email, input.Password)
+	user, token, err := h.AuthService.LoginUser(input.Email, input.Password)
 	if err != nil {
 		ctx.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 		return
@@ -66,6 +67,7 @@ func (h *AuthHandler) Login(ctx *gin.Context) {
 	// return json
 	ctx.JSON(http.StatusOK, gin.H{
 		"message": "Login successfull",
+		"token":   token,
 		"user": gin.H{
 			"id":       user.ID,
 			"username": user.Name,
