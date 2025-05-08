@@ -17,6 +17,7 @@ type AuthService interface {
 	RegisterUser(name, email, password string) (*models.User, string, string, error)
 	LoginUser(email, password string) (*models.User, string, string, error)
 	GenerateAndSaveRefreshToken(userID uuid.UUID, oldRefreshToken string) (string, time.Time, error)
+	GenerateAccessTokenByRefreshToken(refreshToken string) (string, error)
 }
 
 // AuthServiceImpl is the concrete implementation of AuthService
@@ -142,4 +143,26 @@ func (s *AuthServiceImpl) GenerateAndSaveRefreshToken(userID uuid.UUID, oldRefre
 	}
 
 	return newToken, refreshExp, nil
+}
+
+// GenerateAccessTokenByRefreshToken verifies a refresh token and issues a new access token
+func (s *AuthServiceImpl) GenerateAccessTokenByRefreshToken(refreshToken string) (string, error) {
+	// 1. Get refresh token from DB
+	storedToken, err := s.AuthRepo.GetRefreshTokenByToken(refreshToken)
+	if err != nil || storedToken == nil {
+		return "", errors.New("invalid refresh token")
+	}
+
+	// 2. Check if expired
+	if time.Now().After(storedToken.ExpiresAt) {
+		return "", errors.New("refresh token has expired")
+	}
+
+	// 3. Generate new access token
+	newAccessToken, err := s.GenerateAccessToken(storedToken.UserID.String(), "")
+	if err != nil {
+		return "", fmt.Errorf("failed to generate access token: %v", err)
+	}
+
+	return newAccessToken, nil
 }

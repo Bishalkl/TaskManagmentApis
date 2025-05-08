@@ -17,6 +17,7 @@ type AuthRepository interface {
 	DeleteUser(user *models.User) (*models.User, error)
 	SaveRefreshToken(userID uuid.UUID, refreshToken string, expiresAt time.Time) (*models.RefreshToken, error)
 	GetRefreshTokenByToken(refreshToken string) (*models.RefreshToken, error)
+	DeleteRefreshToken(userID uuid.UUID) error
 }
 
 type AuthRepositoryImpl struct {
@@ -66,6 +67,12 @@ func (repo *AuthRepositoryImpl) DeleteUser(user *models.User) (*models.User, err
 
 // saveRefreshToken
 func (repo *AuthRepositoryImpl) SaveRefreshToken(userID uuid.UUID, refreshToken string, expiresAt time.Time) (*models.RefreshToken, error) {
+
+	// First delete existing token
+	if err := repo.DB.Where("user_id = ?", userID).Delete(&models.RefreshToken{}).Error; err != nil {
+		return nil, err
+	}
+
 	refreshTokenRecord := models.RefreshToken{
 		UserID:    userID,
 		Token:     refreshToken,
@@ -96,3 +103,5 @@ func (r *AuthRepositoryImpl) DeleteRefreshToken(userID uuid.UUID) error {
 
 	return nil
 }
+
+// 

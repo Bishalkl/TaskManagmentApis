@@ -3,7 +3,9 @@ package handlers
 import (
 	"TaskManagmentApis/internal/models"
 	service "TaskManagmentApis/internal/services"
+	"TaskManagmentApis/pkg/utils"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -63,11 +65,14 @@ func (h *AuthHandler) Login(ctx *gin.Context) {
 	}
 
 	// Login service
-	user, accessToken, _, err := h.AuthService.LoginUser(input.Email, input.Password)
+	user, accessToken, refreshToken, err := h.AuthService.LoginUser(input.Email, input.Password)
 	if err != nil {
 		respondWithError(ctx, http.StatusConflict, err.Error())
 		return
 	}
+
+	// set-cookie
+	utils.SetRefreshTokenCookie(ctx, refreshToken, 60*60*24*7)
 
 	// Return success response
 	ctx.JSON(http.StatusOK, gin.H{
@@ -78,5 +83,28 @@ func (h *AuthHandler) Login(ctx *gin.Context) {
 			"username": user.Name,
 			"email":    user.Email,
 		},
+	})
+}
+
+func (h *AuthHandler) RefrestToken(ctx *gin.Context) {
+	var req struct {
+		RefreshToken string `json:"refreshToken"`
+	}
+
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	// Generate a new access token
+	newAccessToken, err := h.AuthService.GenerateAccessTokenByRefreshToken(req.RefreshToken)
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"access_token": newAccessToken,
+		"expires_in":   time.Now().Add(time.Minute * 15).Unix(), // adjust if needed
 	})
 }
