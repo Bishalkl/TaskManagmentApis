@@ -12,8 +12,8 @@ import (
 
 // first interface
 type AuthService interface {
-	Register(name, email, password string) (*models.User, error)
-	Login(email, password string) (*models.User, error)
+	RegisterUser(name, email, password string) (*models.User, error)
+	LoginUser(email, password string) (*models.User, error)
 }
 
 type AuthServiceImpl struct {
@@ -50,7 +50,7 @@ func (s *AuthServiceImpl) UserExist(email string) error {
 }
 
 // register
-func (s *AuthServiceImpl) Register(name, email, password string) (*models.User, error) {
+func (s *AuthServiceImpl) RegisterUser(name, email, password string) (*models.User, error) {
 	if err := s.UserExist(email); err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ func (s *AuthServiceImpl) Register(name, email, password string) (*models.User, 
 
 // login
 
-func (s *AuthServiceImpl) Login(email, password string) (*models.User, error) {
+func (s *AuthServiceImpl) LoginUser(email, password string) (*models.User, error) {
 	var user *models.User
 	var err error
 
