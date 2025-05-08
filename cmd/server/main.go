@@ -4,6 +4,7 @@ import (
 	config "TaskManagmentApis/configs"
 	"TaskManagmentApis/internal/bootstrap"
 	"TaskManagmentApis/internal/middleware"
+	"TaskManagmentApis/internal/routes"
 	"log"
 	"net/http"
 
@@ -12,7 +13,7 @@ import (
 
 func main() {
 	// Initialize application (config, DB, handler, etc.)
-	_, err := bootstrap.InitalizeApp()
+	app, err := bootstrap.InitalizeApp()
 	if err != nil {
 		log.Fatal("❌ App initialization failed:", err)
 	}
@@ -27,6 +28,9 @@ func main() {
 	router.GET("/tester", func(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{"message": "🚀 Hello, TaskManagmentApis is working!"})
 	})
+
+	// routes for auth
+	routes.SetupAuthRoutes(router, app.Handler.Auth)
 
 	// Get port from config (with fallback)
 	port := config.Config.Port

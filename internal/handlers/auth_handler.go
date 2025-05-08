@@ -47,7 +47,7 @@ func (h *AuthHandler) Register(ctx *gin.Context) {
 }
 
 // Login handles user login
-func (h *AuthHandler) Loging(ctx *gin.Context) {
+func (h *AuthHandler) Login(ctx *gin.Context) {
 	var input models.LoginRequest
 
 	// first bind json

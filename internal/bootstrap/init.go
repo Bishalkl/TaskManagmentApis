@@ -3,6 +3,9 @@ package bootstrap
 import (
 	config "TaskManagmentApis/configs"
 	"TaskManagmentApis/internal/database"
+	"TaskManagmentApis/internal/handlers"
+	"TaskManagmentApis/internal/repositories"
+	service "TaskManagmentApis/internal/services"
 	"context"
 	"fmt"
 	"log"
@@ -10,9 +13,14 @@ import (
 	"gorm.io/gorm"
 )
 
+type Handlers struct {
+	Auth *handlers.AuthHandler
+}
+
 type AppContainer struct {
 	DB           *gorm.DB
 	RedisService database.RedisService
+	Handler      Handlers
 }
 
 func InitalizeApp() (*AppContainer, error) {
@@ -37,9 +45,26 @@ func InitalizeApp() (*AppContainer, error) {
 
 	}
 
+	// repo->service->handler
+
+	// Initialize repo
+	log.Println("📦 Initializing repositories...")
+	authRepo := repositories.NewAuthRepository(db)
+
+	// initialize service
+	log.Println("🧠 Initializing services...")
+	authService := service.NewAuthService(authRepo)
+
+	// Initialize handler
+	log.Println("🧠 Initializing services...")
+	authHandler := handlers.NewAuthHandler(authService)
+
 	return &AppContainer{
 		DB:           db,
 		RedisService: redisService,
+		Handler: Handlers{
+			Auth: authHandler,
+		},
 	}, nil
 
 }
