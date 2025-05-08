@@ -21,5 +21,9 @@ func (r *RefreshToken) BeforeCreate(tx *gorm.DB) (err error) {
 	if r.ID == uuid.Nil {
 		r.ID = uuid.New()
 	}
+
+	if r.CreatedAt.IsZero() {
+		r.CreatedAt = time.Now()
+	}
 	return
 }

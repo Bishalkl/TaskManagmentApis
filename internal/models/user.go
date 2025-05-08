@@ -15,7 +15,7 @@ type User struct {
 	IsVerified    bool           `gorm:"default:false" json:"is_verified"`
 	Role          string         `gorm:"size:20;default:user" json:"role"`
 	Tasks         []Task         `gorm:"foreignKey:UserID" json:"tasks,omitempty"`
-	RefreshTokens []RefreshToken `gorm:"foreignKey:UserID" json:"-"`
+	RefreshTokens []RefreshToken `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE" json:"-"`
 	CreatedAt     time.Time      `json:"created_at"`
 	UpdatedAt     time.Time      `json:"updated_at"`
 }

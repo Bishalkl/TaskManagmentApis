@@ -10,6 +10,7 @@ import (
 
 func AuthMiddleware() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
+		// Get Authorization header
 		authHeader := ctx.GetHeader("Authorization")
 		if authHeader == "" {
 			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header is missing"})
@@ -21,7 +22,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 
 		// Valildate token
-		userID, err := utils.ValidateToken(tokenString)
+		clamis, err := utils.ValidateToken(tokenString)
 		if err != nil {
 			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
 			ctx.Abort()
@@ -29,7 +30,8 @@ func AuthMiddleware() gin.HandlerFunc {
 		}
 
 		// set the user Id in the context to use in handlers
-		ctx.Set("user_id", userID)
+		ctx.Set("user_id", clamis.UserID)
+		ctx.Set("email", clamis.Email)
 
 		// continue with the request
 		ctx.Next()

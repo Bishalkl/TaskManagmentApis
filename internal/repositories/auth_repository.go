@@ -3,7 +3,9 @@ package repositories
 import (
 	"TaskManagmentApis/internal/models"
 	"errors"
+	"time"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -13,6 +15,8 @@ type AuthRepository interface {
 	GetUserByEmail(email string) (*models.User, error)
 	UpdateUser(user *models.User) (*models.User, error)
 	DeleteUser(user *models.User) (*models.User, error)
+	SaveRefreshToken(userID uuid.UUID, refreshToken string, expiresAt time.Time) (*models.RefreshToken, error)
+	GetRefreshTokenByToken(refreshToken string) (*models.RefreshToken, error)
 }
 
 type AuthRepositoryImpl struct {
@@ -58,4 +62,37 @@ func (repo *AuthRepositoryImpl) DeleteUser(user *models.User) (*models.User, err
 		return nil, err
 	}
 	return user, nil
+}
+
+// saveRefreshToken
+func (repo *AuthRepositoryImpl) SaveRefreshToken(userID uuid.UUID, refreshToken string, expiresAt time.Time) (*models.RefreshToken, error) {
+	refreshTokenRecord := models.RefreshToken{
+		UserID:    userID,
+		Token:     refreshToken,
+		ExpiresAt: expiresAt,
+	}
+
+	// Save the refresh token to the database
+	if err := repo.DB.Create(&refreshTokenRecord).Error; err != nil {
+		return nil, err
+	}
+	return &refreshTokenRecord, nil
+}
+
+// getRefreshToken
+func (r *AuthRepositoryImpl) GetRefreshTokenByToken(refreshToken string) (*models.RefreshToken, error) {
+	var refreshTokenRecord models.RefreshToken
+	if err := r.DB.Where("token = ?", refreshToken).First(&refreshTokenRecord).Error; err != nil {
+		return nil, err
+	}
+	return &refreshTokenRecord, nil
+}
+
+// DeleteRefreshToken
+func (r *AuthRepositoryImpl) DeleteRefreshToken(userID uuid.UUID) error {
+	if err := r.DB.Where("user_id = ?", userID).Delete(&models.RefreshToken{}).Error; err != nil {
+		return err
+	}
+
+	return nil
 }

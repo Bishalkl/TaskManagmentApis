@@ -18,27 +18,32 @@ func NewAuthHandler(authService service.AuthService) *AuthHandler {
 	}
 }
 
+// Helper function for centralized error responses
+func respondWithError(ctx *gin.Context, code int, message string) {
+	ctx.JSON(code, gin.H{"error": message})
+}
+
 // Register handles user registration
 func (h *AuthHandler) Register(ctx *gin.Context) {
 	var input models.RegisterRequest
 
-	// first bind it
+	// First bind the input JSON
 	if err := ctx.ShouldBindJSON(&input); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		respondWithError(ctx, http.StatusBadRequest, "Invalid input")
 		return
 	}
 
-	// register service
-	user, token, err := h.AuthService.RegisterUser(input.Name, input.Email, input.Password)
+	// Register service
+	user, accessToken, _, err := h.AuthService.RegisterUser(input.Name, input.Email, input.Password)
 	if err != nil {
-		ctx.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		respondWithError(ctx, http.StatusConflict, err.Error())
 		return
 	}
 
-	// return json
+	// Return success response
 	ctx.JSON(http.StatusCreated, gin.H{
-		"message": "User registered successfully",
-		"token":   token,
+		"message":     "User registered successfully",
+		"accesstoken": accessToken,
 		"user": gin.H{
 			"userId":   user.ID,
 			"username": user.Name,
@@ -51,28 +56,27 @@ func (h *AuthHandler) Register(ctx *gin.Context) {
 func (h *AuthHandler) Login(ctx *gin.Context) {
 	var input models.LoginRequest
 
-	// first bind json
+	// First bind the input JSON
 	if err := ctx.ShouldBindJSON(&input); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invaild input"})
+		respondWithError(ctx, http.StatusBadRequest, "Invalid input")
 		return
 	}
 
 	// Login service
-	user, token, err := h.AuthService.LoginUser(input.Email, input.Password)
+	user, accessToken, _, err := h.AuthService.LoginUser(input.Email, input.Password)
 	if err != nil {
-		ctx.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		respondWithError(ctx, http.StatusConflict, err.Error())
 		return
 	}
 
-	// return json
+	// Return success response
 	ctx.JSON(http.StatusOK, gin.H{
-		"message": "Login successfull",
-		"token":   token,
+		"message":      "Login successful",
+		"access_token": accessToken,
 		"user": gin.H{
 			"id":       user.ID,
 			"username": user.Name,
 			"email":    user.Email,
 		},
 	})
-
 }

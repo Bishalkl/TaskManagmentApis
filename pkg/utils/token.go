@@ -8,6 +8,12 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 )
 
+// Constant for JWT claims
+const (
+	TokenIssuer   = "TaskManagerApis"
+	TokenAudience = "taskmanager-client"
+)
+
 // Claims defines the payload structure for the JWT token
 type Claims struct {
 	UserID string `json:"user_id"`
@@ -23,9 +29,9 @@ func GenerateToken(userID, email string, duration time.Duration) (string, error)
 		UserID: userID,
 		Email:  email,
 		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    "TaskManagerApis",
+			Issuer:    TokenIssuer,
 			Subject:   userID,
-			Audience:  jwt.ClaimStrings{"taskmanager-client"},
+			Audience:  jwt.ClaimStrings{TokenAudience},
 			ExpiresAt: jwt.NewNumericDate(now.Add(duration)),
 			IssuedAt:  jwt.NewNumericDate(now),
 			NotBefore: jwt.NewNumericDate(now),
@@ -48,9 +54,16 @@ func GenerateAccessToken(userID, email string) (string, error) {
 }
 
 // GenerateRefreshToken generates a long-lived token for re-authentication
-func GenerateRefreshToken(userID, email string) (string, error) {
-	expiration := time.Duration(config.Config.RefreshTokenExpireHours) * time.Hour
-	return GenerateToken(userID, email, expiration)
+func GenerateRefreshToken(userID, email string) (string, time.Time, error) {
+	duration := time.Duration(config.Config.RefreshTokenExpireHours) * time.Hour
+	expirationTime := time.Now().Add(duration)
+
+	token, err := GenerateToken(userID, email, duration)
+	if err != nil {
+		return "", time.Time{}, err
+	}
+
+	return token, expirationTime, nil
 }
 
 // ValidateToken parses and validates a JWT string and returns its claims

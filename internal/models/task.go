@@ -21,6 +21,10 @@ type Task struct {
 	User User `gorm:"constraint:OnDelete:CASCADE" json:"-"`
 }
 
+func (t *Task) TableName() string {
+	return "task" // Custom table name
+}
+
 func (t *Task) BeforeCreate(tx *gorm.DB) (err error) {
 	if t.ID == uuid.Nil {
 		t.ID = uuid.New()
