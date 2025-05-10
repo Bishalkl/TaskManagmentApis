@@ -80,6 +80,7 @@ func ValidateToken(tokenStr string) (*Claims, error) {
 		return nil, fmt.Errorf("failed to parse token: %v", err)
 	}
 
+	// Token claims
 	claims, ok := token.Claims.(*Claims)
 	if !ok || !token.Valid {
 		return nil, fmt.Errorf("invalid or expired token")

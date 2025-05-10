@@ -21,19 +21,27 @@ func AuthMiddleware() gin.HandlerFunc {
 		// The token is passed as "Bearer <token>"
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 
-		// Valildate token
-		clamis, err := utils.ValidateToken(tokenString)
+		// Ensure token is not empty after trimming "Bearer "
+		if tokenString == "" {
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Token is missing"})
+			ctx.Abort()
+			return
+		}
+
+		// Validate token
+		claims, err := utils.ValidateToken(tokenString)
 		if err != nil {
 			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
 			ctx.Abort()
 			return
 		}
 
-		// set the user Id in the context to use in handlers
-		ctx.Set("user_id", clamis.UserID)
-		ctx.Set("email", clamis.Email)
+		// Set the claims and user info in the context for use in handlers
+		ctx.Set("claims", claims)
+		ctx.Set("user_id", claims.UserID)
+		ctx.Set("email", claims.Email)
 
-		// continue with the request
+		// Continue with the request
 		ctx.Next()
 	}
 }
