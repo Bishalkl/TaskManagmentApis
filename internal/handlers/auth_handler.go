@@ -4,7 +4,7 @@ import (
 	"TaskManagmentApis/internal/models"
 	service "TaskManagmentApis/internal/services"
 	"TaskManagmentApis/pkg/utils"
-	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -33,7 +33,7 @@ func respondWithError(ctx *gin.Context, code int, message string) {
 func (h *AuthHandler) Register(ctx *gin.Context) {
 	var input models.RegisterRequest
 
-	// First bind the input JSON
+	// Bind the input JSON
 	if err := ctx.ShouldBindJSON(&input); err != nil {
 		respondWithError(ctx, http.StatusBadRequest, "Invalid input")
 		return
@@ -46,13 +46,13 @@ func (h *AuthHandler) Register(ctx *gin.Context) {
 		return
 	}
 
-	// set-cookie
-	utils.SetRefreshTokenCookie(ctx, refreshToken, 60*60*24*7)
+	// Set cookie with refresh token
+	utils.SetRefreshTokenCookie(ctx, refreshToken, config.Config.RefreshTokenExpireHours)
 
 	// Return success response
 	ctx.JSON(http.StatusCreated, gin.H{
-		"message":     "User registered successfully",
-		"accesstoken": accessToken,
+		"message":      "User registered successfully",
+		"access_token": accessToken,
 		"user": gin.H{
 			"userId":   user.ID,
 			"username": user.Name,
@@ -65,7 +65,7 @@ func (h *AuthHandler) Register(ctx *gin.Context) {
 func (h *AuthHandler) Login(ctx *gin.Context) {
 	var input models.LoginRequest
 
-	// First bind the input JSON
+	// Bind the input JSON
 	if err := ctx.ShouldBindJSON(&input); err != nil {
 		respondWithError(ctx, http.StatusBadRequest, "Invalid input")
 		return
@@ -78,8 +78,8 @@ func (h *AuthHandler) Login(ctx *gin.Context) {
 		return
 	}
 
-	// set-cookie
-	utils.SetRefreshTokenCookie(ctx, refreshToken, 60*60*24*7)
+	// Set cookie with refresh token
+	utils.SetRefreshTokenCookie(ctx, refreshToken, config.Config.RefreshTokenExpireHours)
 
 	// Return success response
 	ctx.JSON(http.StatusOK, gin.H{
@@ -93,53 +93,57 @@ func (h *AuthHandler) Login(ctx *gin.Context) {
 	})
 }
 
-// hanlder for logout user
+// Logout handles user logout
 func (h *AuthHandler) Logout(ctx *gin.Context) {
-	// Get the user ID from the claims stored in the context by the JWT middleware
-	claimsRaw, exists := ctx.Get("claims")
+	// Get user ID from context
+	userIDValue, exists := ctx.Get("user_id")
 	if !exists {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or missing claims"})
+		respondWithError(ctx, http.StatusUnauthorized, "User ID is not found in context")
 		return
 	}
 
-	// Extract the user ID from the claims
-	claims, ok := claimsRaw.(*utils.Claims)
-	if !ok {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims format"})
+	// Convert interface {} to uuid.UUID (if it's a string, parse it)
+	var userID uuid.UUID
+	switch v := userIDValue.(type) {
+	case string:
+		// Attempt to convert string to uuid.UUID
+		parsedUUID, err := uuid.Parse(v)
+		if err != nil {
+			respondWithError(ctx, http.StatusInternalServerError, "Invalid user ID format")
+			return
+		}
+		userID = parsedUUID
+	case uuid.UUID:
+		userID = v
+	default:
+		respondWithError(ctx, http.StatusInternalServerError, "Invalid user ID format")
 		return
 	}
 
-	// conver the string userId to uuid.UUID
+	// Log the user ID for debugging purposes
+	log.Printf("Logging out user %s", userID)
 
-	userIDStr, ok := claims["user_id"].(string)
-	if !ok {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user_id in token claims"})
+	// Call service to delete the refresh token
+	if err := h.AuthService.LogoutUser(userID); err != nil {
+		log.Printf("Logout failed for user %v: %v", userID, err) // Log the error
+		respondWithError(ctx, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	UserID, err := uuid.Parse(userIDStr)
-	if err != nil {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID format"})
-		return
-	}
-
-	// Call the service method to logout the user (e.g., invalidate the refresh token or perform other actions)
-	if err := h.AuthService.LogoutUser(UserID); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to logout: %v", err)})
-		return
-	}
+	// Clear refresh token cookies
+	utils.ClearRefreshTokenCookie(ctx)
 
 	// Return success response
-	ctx.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
+	ctx.JSON(http.StatusOK, gin.H{"message": "Logout successful"})
 }
 
-// handler for refresh-token apis
-
-func (h *AuthHandler) RefrestToken(ctx *gin.Context) {
+// RefreshToken handles refresh token requests
+func (h *AuthHandler) RefreshToken(ctx *gin.Context) {
 	var req struct {
 		RefreshToken string `json:"refreshToken"`
 	}
 
+	// Bind the request body
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
@@ -153,8 +157,9 @@ func (h *AuthHandler) RefrestToken(ctx *gin.Context) {
 	}
 
 	// Set the new refresh token in the cookie
-	utils.SetRefreshTokenCookie(ctx, newRefreshToken, 60*60*24*7)
+	utils.SetRefreshTokenCookie(ctx, newRefreshToken, config.Config.RefreshTokenExpireHours)
 
+	// Return the new access token and expiry time
 	ctx.JSON(http.StatusOK, gin.H{
 		"access_token": newAccessToken,
 		"expires_in":   time.Duration(config.Config.AccessTokenExpireMinutes) * time.Minute,

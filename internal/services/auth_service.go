@@ -153,14 +153,13 @@ func (s *AuthServiceImpl) LoginUser(email, password string) (*models.User, strin
 }
 
 // Logout user handles user logout
-func (s *AuthServiceImpl) LogoutUser(UserID uuid.UUID) error {
-	err := s.AuthRepo.DeleteRefreshToken(UserID)
-	if err != nil {
-		log.Printf("Error logging out user %s: %v", UserID, err)
-		return fmt.Errorf("failed to logout user: %v", err)
+func (s *AuthServiceImpl) LogoutUser(userID uuid.UUID) error {
+	if err := s.AuthRepo.DeleteRefreshToken(userID); err != nil {
+		log.Printf("Error logging out user %s: %v", userID, err)
+		return err // No need to wrap again unless adding more context
 	}
 
-	log.Printf("User %s logged out successfully", UserID)
+	log.Printf("User %s logged out successfully", userID)
 	return nil
 }
 

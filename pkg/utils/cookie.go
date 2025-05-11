@@ -14,3 +14,7 @@ func SetRefreshTokenCookie(ctx *gin.Context, token string, maxAge int) {
 	)
 	ctx.Header("Set-Cookie", cookie)
 }
+
+func ClearRefreshTokenCookie(ctx *gin.Context) {
+	ctx.SetCookie("refresh_token", "", -1, "/", "", false, true)
+}

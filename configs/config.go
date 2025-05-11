@@ -48,7 +48,7 @@ func LoadEnv() {
 		RedisHost:                MustGetEnvOrDefault("REDIS_HOST", "localhost"),
 		RedisPort:                MustGetEnvOrDefault("REDIS_PORT", "6379"),
 		RedisPassword:            MustGetEnvOrDefault("REDIS_PASSWORD", ""),
-		JWTSecretKey:             MustGetEnvOrDefault("JWT_SECRET", "mysecret"),
+		JWTSecretKey:             MustGetEnvOrDefault("JWT_SECRET", "mysecretkey"),
 		AccessTokenExpireMinutes: mustGetEnvASInt("ACCESS_TOKEN_EXPIRE_MINUTES", 15),
 		RefreshTokenExpireHours:  mustGetEnvASInt("REFRESH_TOKEN_EXPIRE_HOURS", 24),
 	}

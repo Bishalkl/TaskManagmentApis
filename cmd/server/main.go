@@ -25,7 +25,7 @@ func main() {
 	router.Use(middleware.Errorhandler())
 
 	// checking routes
-	router.GET("/tester", func(ctx *gin.Context) {
+	router.GET("/tester", middleware.AuthMiddleware(), func(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{"message": "🚀 Hello, TaskManagmentApis is working!"})
 	})
 

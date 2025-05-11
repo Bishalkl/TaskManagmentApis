@@ -16,9 +16,9 @@ func SetupAuthRoutes(router *gin.Engine, authHandler *handlers.AuthHandler) {
 	{
 		authRoutes.POST("/register", authHandler.Register)
 		authRoutes.POST("/login", authHandler.Login)
-		authRoutes.POST("/refresh-token", authHandler.RefrestToken)
+		authRoutes.POST("/refresh-token", authHandler.RefreshToken)
 
-		// Protected route for logout (using middleware)
+		// // Protected route for logout (using middleware)
 		authRoutes.Use(middleware.AuthMiddleware()) // Add your middleware for authentication
 		authRoutes.POST("/logout", authHandler.Logout)
 	}

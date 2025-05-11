@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"TaskManagmentApis/pkg/utils"
+	"log"
 	"net/http"
 	"strings"
 
@@ -18,12 +19,10 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// The token is passed as "Bearer <token>"
+		// Expecting format: "Bearer <token>"
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-
-		// Ensure token is not empty after trimming "Bearer "
-		if tokenString == "" {
-			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Token is missing"})
+		if tokenString == authHeader { // Bearer prefix was not found
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token format"})
 			ctx.Abort()
 			return
 		}
@@ -31,17 +30,22 @@ func AuthMiddleware() gin.HandlerFunc {
 		// Validate token
 		claims, err := utils.ValidateToken(tokenString)
 		if err != nil {
-			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
+			// Check if error is related to token expiration
+			if strings.Contains(err.Error(), "expired") {
+				ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Token has expired"})
+			} else {
+				ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+			}
+			log.Printf("Token validation failed: %v", err) // Logging the error for debugging
 			ctx.Abort()
 			return
 		}
 
-		// Set the claims and user info in the context for use in handlers
+		// Set values in context
 		ctx.Set("claims", claims)
-		ctx.Set("user_id", claims.UserID)
+		ctx.Set("user_id", claims.UserID) // Corrected key from user_idad to user_id
 		ctx.Set("email", claims.Email)
 
-		// Continue with the request
 		ctx.Next()
 	}
 }
